@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<!-- Hace que la página se adapte al ancho de móviles y tabletas -->
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ProfitCalc – Calculadora gratuita de ganancias para revendedores</title>
+<!-- Texto que Google puede mostrar bajo el título en los resultados de búsqueda -->
+<meta name="description" content="Calcula gratis cuánto ganas realmente con cada venta: coste, comisión, ganancia neta, margen e inversión. Para revendedores y pequeños negocios.">
+
+<style>
+/* =========================================================
+   1. VARIABLES
+   Los colores y medidas se definen una sola vez aquí.
+   Si cambias --verde, cambia el acento de toda la página.
+   ========================================================= */
+:root {
+  --verde: #0F7A4A;          /* acento principal */
+  --verde-claro: #F1F8F4;    /* fondo del panel de resultados */
+  --verde-borde: #CFE6D8;
+  --texto: #0F1F17;          /* texto principal (casi negro) */
+  --texto-suave: #4B5B53;    /* texto secundario */
+  --fondo: #F7F9F8;
+  --borde: #E1E8E4;
+  --borde-campo: #B9C6BF;
+  --error: #B3261E;          /* errores y pérdidas */
+  --radio: 16px;
+}
+
+/* =========================================================
+   2. ESTILOS BASE
+   ========================================================= */
+* { box-sizing: border-box; }
+
+html {
+  scroll-behavior: smooth;   /* desplazamiento suave al pulsar enlaces del menú */
+  scroll-padding-top: 90px;  /* evita que el encabezado fijo tape los títulos */
+}
+/* Si el usuario prefiere menos movimiento, se desactiva la animación */
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+
+body {
+  margin: 0;
+  font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  background: var(--fondo);
+  color: var(--texto);
+  line-height: 1.55;
+}
+
+a { color: inherit; text-decoration: none; }
+h1, h2, h3 { line-height: 1.2; letter-spacing: -0.01em; }
+h2 { font-size: 32px; margin: 0 0 12px; }
+h3 { font-size: 18px; margin: 0 0 8px; }
+p  { margin: 0; }
+
+/* Contorno visible al navegar con teclado (accesibilidad) */
+a:focus-visible, button:focus-visible, input:focus-visible, summary:focus-visible {
+  outline: 3px solid var(--verde);
+  outline-offset: 2px;
+}
+
+/* Contenedor central: limita el ancho en pantallas grandes */
+.wrap { max-width: 1120px; margin: 0 auto; padding: 0 24px; }
+
+.suave { color: var(--texto-suave); }
+.seccion { padding: 72px 0; }
+
+/* Tarjeta reutilizable: borde suave y sombra discreta */
+.tarjeta {
+  background: #fff;
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  box-shadow: 0 2px 8px rgba(15, 31, 23, 0.06);
+}
+
+/* Botones */
+.btn {
+  display: inline-block;
+  background: var(--verde);
+  color: #fff;
+  font: 600 16px/1.2 inherit;
+  padding: 14px 24px;
+  border: 1px solid var(--verde);
+  border-radius: 10px;
+  cursor: pointer;
+}
+.btn:hover { background: #0B6339; }
+.btn-secundario { background: #fff; color: var(--texto); border-color: var(--borde-campo); }
+.btn-secundario:hover { background: var(--fondo); }
+
+/* =========================================================
+   3. ENCABEZADO
+   Queda fijo arriba (sticky) mientras se hace scroll.
+   ========================================================= */
+.encabezado {
+  position: sticky; top: 0; z-index: 10;
+  background: #fff;
+  border-bottom: 1px solid var(--borde);
+}
+.encabezado .wrap {
+  display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: 8px 16px; min-height: 72px;
+}
+.logo { font-weight: 800; font-size: 22px; letter-spacing: -0.02em; }
+.logo span { color: var(--verde); }
+.menu { display: flex; gap: 32px; font-weight: 500; font-size: 15px; }
+.menu a:hover { color: var(--verde); }
+.btn-pequeno { padding: 10px 18px; font-size: 15px; }
+
+/* =========================================================
+   4. PRESENTACIÓN (HERO)
+   ========================================================= */
+.hero { padding: 64px 0 32px; text-align: center; }
+.hero .wrap { max-width: 800px; }
+.hero h1 { font-size: 52px; margin: 0 0 16px; letter-spacing: -0.025em; font-weight: 800; }
+.hero p.intro { font-size: 18px; margin-bottom: 28px; }
+.hero small { display: block; margin-top: 14px; font-size: 13px; }
+
+/* =========================================================
+   5. CALCULADORA
+   Dos columnas en escritorio (datos | resultados).
+   auto-fit + minmax: se apilan solas cuando no hay espacio.
+   ========================================================= */
+.calculadora { padding: 24px 0 40px; }
+.calc-caja { padding: 32px; }
+.calc-cabecera {
+  display: flex; justify-content: space-between; align-items: baseline;
+  flex-wrap: wrap; gap: 8px; margin-bottom: 24px;
+}
+.calc-cabecera h2 { font-size: 26px; margin: 0; }
+.calc-cabecera span { font-size: 13px; }
+
+.calc-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 40px;
+}
+.campos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 18px;
+}
+
+/* Campos del formulario */
+.campo label { display: block; font-size: 14px; font-weight: 600; margin-bottom: 6px; }
+.campo input {
+  width: 100%; height: 48px; padding: 0 14px;
+  font: 500 16px inherit; color: var(--texto);
+  background: #fff; border: 1px solid var(--borde-campo); border-radius: 10px;
+}
+.campo .ayuda { display: block; font-size: 12.5px; color: var(--texto-suave); margin-top: 4px; }
+.campo .error { display: block; font-size: 13px; font-weight: 600; color: var(--error); margin-top: 4px; }
+/* El navegador marca el campo con aria-invalid="true" cuando hay error */
+.campo input[aria-invalid="true"] { border-color: var(--error); box-shadow: 0 0 0 1px var(--error); }
+
+.acciones { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 24px; }
+
+/* Panel de resultados */
+.resultados {
+  background: var(--verde-claro);
+  border: 1px solid var(--verde-borde);
+  border-radius: 14px;
+  padding: 24px;
+}
+.resultados .titulo { font-size: 14px; font-weight: 600; color: var(--texto-suave); }
+.neta {
+  font-size: 48px; font-weight: 800; line-height: 1.15;
+  color: var(--verde); letter-spacing: -0.02em; word-break: break-word;
+}
+.margen {
+  display: inline-block; margin: 6px 0 14px; padding: 4px 12px;
+  font-size: 14px; font-weight: 600; color: #fff;
+  background: var(--verde); border-radius: 999px;
+}
+/* Clase "perdida": se añade con JavaScript cuando la ganancia es negativa */
+.resultados.perdida .neta { color: var(--error); }
+.resultados.perdida .margen { background: var(--error); }
+
+.fila {
+  display: flex; justify-content: space-between; gap: 12px;
+  padding: 12px 0; border-bottom: 1px solid var(--borde); font-size: 15px;
+}
+.fila b { font-weight: 700; text-align: right; word-break: break-word; }
+.fila.total { border-bottom: 0; }
+.fila.total b { font-size: 18px; color: var(--verde); }
+.resultados.perdida .fila.total b { color: var(--error); }
+
+/* Mensaje de estado (avisos y errores generales) */
+.estado { margin-top: 10px; font-size: 13.5px; min-height: 20px; }
+.estado.alerta { color: var(--error); font-weight: 600; }
+.nota { font-size: 12.5px; margin-top: 8px; }
+
+/* =========================================================
+   6. ESPACIOS PUBLICITARIOS (solo marcadores visuales)
+   Cuando haya anuncios reales, se colocarían dentro de estos bloques.
+   ========================================================= */
+.anuncio {
+  display: flex; align-items: center; justify-content: center; text-align: center;
+  padding: 12px; color: var(--texto-suave); font-size: 13px;
+  background: #F1F5F3; border: 1.5px dashed var(--borde-campo); border-radius: 12px;
+}
+.anuncio-banner { height: 100px; margin-top: 28px; }
+.anuncio-cuadro { height: 250px; max-width: 728px; margin: 48px auto 0; }
+
+/* =========================================================
+   7. EXPLICACIÓN, CÓMO FUNCIONA, PREGUNTAS FRECUENTES
+   ========================================================= */
+.banda { background: #fff; border-top: 1px solid var(--borde); border-bottom: 1px solid var(--borde); }
+.rejilla {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 20px;
+}
+.rejilla .tarjeta { padding: 24px; }
+.lead { max-width: 640px; margin-bottom: 32px; }
+
+.paso-num {
+  width: 40px; height: 40px; margin-bottom: 12px;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--verde); color: #fff; font-weight: 700; border-radius: 999px;
+}
+
+.faq .wrap { max-width: 800px; }
+details { border-bottom: 1px solid var(--borde); padding: 18px 0; }
+summary { font-weight: 600; font-size: 17px; cursor: pointer; }
+details p { margin-top: 10px; color: var(--texto-suave); }
+
+/* =========================================================
+   8. PIE DE PÁGINA
+   ========================================================= */
+.pie { background: #0F1F17; color: #E6EEE9; padding: 48px 0 32px; }
+.pie .fila-pie { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 24px; }
+.pie .logo span { color: #5FD39A; }
+.pie nav { display: flex; gap: 24px; flex-wrap: wrap; font-size: 15px; }
+.pie a:hover { text-decoration: underline; }
+.pie p { margin-top: 28px; font-size: 13px; color: #B9C6BF; }
+
+/* =========================================================
+   9. RESPONSIVE
+   Reglas que se aplican solo en pantallas más estrechas.
+   ========================================================= */
+@media (max-width: 760px) {
+  .hero h1 { font-size: 34px; }
+  .hero p.intro { font-size: 16px; }
+  h2 { font-size: 26px; }
+  .seccion { padding: 48px 0; }
+  .calc-caja { padding: 20px; }
+  .calc-grid { gap: 28px; }
+  .neta { font-size: 38px; }
+  /* El menú pasa a una segunda fila centrada bajo el logo */
+  .menu { order: 3; width: 100%; justify-content: center; gap: 24px; padding-bottom: 12px; }
+}
+</style>
+</head>
+
+<body>
+
+<!-- =========================================================
+     ENCABEZADO: los enlaces usan "#id" para saltar a cada sección
+     ========================================================= -->
+<header class="encabezado">
+  <div class="wrap">
+    <a href="#inicio" class="logo" aria-label="ProfitCalc, ir al inicio">Profit<span>Calc</span></a>
+    <nav class="menu" aria-label="Principal">
+      <a href="#calculadora">Calculadora</a>
+      <a href="#como-funciona">Cómo funciona</a>
+      <a href="#guias">Guías</a>
+    </nav>
+    <a class="btn btn-pequeno" href="#calculadora">Ir a la calculadora</a>
+  </div>
+</header>
+
+<main id="inicio">
+
+  <!-- PRESENTACIÓN -->
+  <section class="hero">
+    <div class="wrap">
+      <h1>Calcula cuánto ganas realmente con cada venta</h1>
+      <p class="intro suave">Herramienta gratuita para revendedores y pequeños negocios. Suma compra, envío, comisiones y otros gastos para conocer tu ganancia neta y tu margen.</p>
+      <a class="btn" href="#calculadora">Calcular mis ganancias</a>
+      <small class="suave">Gratis · Sin registro · Funciona en tu navegador</small>
+    </div>
+  </section>
+
+  <!-- =========================================================
+       CALCULADORA
+       Es un <form> para que la tecla Enter también calcule.
+       "novalidate" desactiva los avisos del navegador: la
+       validación la hacemos nosotros con JavaScript.
+       ========================================================= -->
+  <section class="calculadora" id="calculadora">
+    <div class="wrap">
+      <div class="tarjeta calc-caja">
+        <div class="calc-cabecera">
+          <h2>Calculadora de ganancias</h2>
+          <span class="suave">Los valores grises son solo ejemplos</span>
+        </div>
+
+        <div class="calc-grid">
+
+          <form id="formulario" novalidate>
+            <div class="campos">
+
+              <!-- Cada campo: etiqueta + input + zona para su mensaje de error -->
+              <div class="campo">
+                <label for="compra">Precio de compra por unidad</label>
+                <input id="compra" type="text" inputmode="decimal" placeholder="Ej. 12.00" autocomplete="off" aria-describedby="error-compra">
+                <span class="error" id="error-compra"></span>
+              </div>
+
+              <div class="campo">
+                <label for="envio">Gastos de envío por unidad</label>
+                <input id="envio" type="text" inputmode="decimal" placeholder="Ej. 2.50" autocomplete="off" aria-describedby="error-envio">
+                <span class="ayuda">Opcional. Vacío cuenta como 0.</span>
+                <span class="error" id="error-envio"></span>
+              </div>
+
+              <div class="campo">
+                <label for="otros">Otros gastos por unidad</label>
+                <input id="otros" type="text" inputmode="decimal" placeholder="Ej. 0.80" autocomplete="off" aria-describedby="error-otros">
+                <span class="ayuda">Opcional. Empaque, publicidad, etc.</span>
+                <span class="error" id="error-otros"></span>
+              </div>
+
+              <div class="campo">
+                <label for="venta">Precio de venta por unidad</label>
+                <input id="venta" type="text" inputmode="decimal" placeholder="Ej. 29.90" autocomplete="off" aria-describedby="error-venta">
+                <span class="error" id="error-venta"></span>
+              </div>
+
+              <div class="campo">
+                <label for="comision">Comisión de venta (%)</label>
+                <input id="comision" type="text" inputmode="decimal" placeholder="Ej. 12" autocomplete="off" aria-describedby="error-comision">
+                <span class="ayuda">Opcional. Plataforma o pasarela de pago.</span>
+                <span class="error" id="error-comision"></span>
+              </div>
+
+              <div class="campo">
+                <label for="unidades">Cantidad de unidades</label>
+                <input id="unidades" type="text" inputmode="numeric" placeholder="Ej. 50" autocomplete="off" aria-describedby="error-unidades">
+                <span class="error" id="error-unidades"></span>
+              </div>
+            </div>
+
+            <div class="acciones">
+              <button type="submit" class="btn">Calcular</button>
+              <button type="button" class="btn btn-secundario" id="limpiar">Limpiar</button>
+            </div>
+
+            <!-- role="alert": los lectores de pantalla anuncian los errores -->
+            <p class="estado" id="estado" role="alert"></p>
+          </form>
+
+          <!-- Panel de resultados. aria-live avisa de cambios a lectores de pantalla -->
+          <div class="resultados" id="resultados" aria-live="polite">
+            <div class="titulo">Ganancia neta por unidad</div>
+            <div class="neta" id="r-neta">—</div>
+            <div class="margen" id="r-margen">Margen de ganancia: —</div>
+
+            <div class="fila"><span>Coste total por unidad</span><b id="r-coste">—</b></div>
+            <div class="fila"><span>Comisión por unidad</span><b id="r-comision">—</b></div>
+            <div class="fila"><span>Inversión estimada</span><b id="r-inversion">—</b></div>
+            <div class="fila total"><span id="r-total-etiqueta">Ganancia total</span><b id="r-total">—</b></div>
+
+            <p class="nota suave">Son estimaciones. No incluyen impuestos ni otros cargos que no hayas introducido.</p>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Espacio reservado para un anuncio futuro (no es un anuncio real) -->
+      <div class="anuncio anuncio-banner">Publicidad · espacio reservado</div>
+    </div>
+  </section>
+
+  <!-- EXPLICACIÓN -->
+  <section class="seccion banda" id="explicacion">
+    <div class="wrap">
+      <h2>Ingresos, costes, ganancia y margen</h2>
+      <p class="suave lead">Cuatro conceptos que se confunden a menudo y que conviene separar para saber si un producto realmente te conviene.</p>
+      <div class="rejilla">
+        <div class="tarjeta"><h3>Ingresos</h3><p class="suave">Todo el dinero que recibes por vender. Precio de venta × unidades.</p></div>
+        <div class="tarjeta"><h3>Costes</h3><p class="suave">Lo que gastas para vender: compra, envío, comisiones y otros gastos.</p></div>
+        <div class="tarjeta"><h3>Ganancia</h3><p class="suave">Lo que te queda: ingresos menos costes.</p></div>
+        <div class="tarjeta"><h3>Margen</h3><p class="suave">La ganancia como porcentaje del precio de venta.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CÓMO FUNCIONA -->
+  <section class="seccion" id="como-funciona">
+    <div class="wrap">
+      <h2>Cómo funciona</h2>
+      <p class="suave lead">Tres pasos y obtienes tu resultado al instante.</p>
+      <div class="rejilla" style="grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));">
+        <div><div class="paso-num">1</div><h3>Ingresa tus costes</h3><p class="suave">Compra, envío y otros gastos por unidad.</p></div>
+        <div><div class="paso-num">2</div><h3>Define tu venta</h3><p class="suave">Precio de venta, comisión y cantidad de unidades.</p></div>
+        <div><div class="paso-num">3</div><h3>Revisa tu ganancia</h3><p class="suave">Ganancia neta, margen, inversión y ganancia total.</p></div>
+      </div>
+      <!-- Segundo espacio publicitario reservado -->
+      <div class="anuncio anuncio-cuadro">Publicidad · espacio reservado</div>
+    </div>
+  </section>
+
+  <!-- PREGUNTAS FRECUENTES (la etiqueta <details> se despliega sin JavaScript) -->
+  <section class="seccion banda faq" id="guias">
+    <div class="wrap">
+      <h2>Guías y preguntas frecuentes</h2>
+      <details open>
+        <summary>¿Cómo se calcula la ganancia de una venta?</summary>
+        <p>Al precio de venta se le resta el coste total por unidad (compra + envío + otros gastos) y la comisión de venta. El resultado es la ganancia neta por unidad; multiplicada por las unidades vendidas da la ganancia total.</p>
+      </details>
+      <details>
+        <summary>¿Cómo funcionan las comisiones?</summary>
+        <p>Normalmente son un porcentaje del precio de venta. Por ejemplo, con una comisión del 10 % y un precio de 50, la comisión es 5. Revisa las condiciones de tu plataforma o pasarela de pago, porque algunas añaden también cargos fijos.</p>
+      </details>
+      <details>
+        <summary>¿Debo incluir los gastos de envío?</summary>
+        <p>Sí, si los pagas tú. Aunque parezcan pequeños, reducen tu ganancia real en cada unidad. Si el cliente paga el envío por separado, puedes dejar ese campo vacío.</p>
+      </details>
+      <details>
+        <summary>¿Qué es el margen de beneficio?</summary>
+        <p>Es la parte del precio de venta que se convierte en ganancia, expresada en porcentaje: ganancia neta ÷ precio de venta × 100. Permite comparar productos con precios distintos.</p>
+      </details>
+      <details>
+        <summary>¿Qué incluye la inversión estimada?</summary>
+        <p>Es el dinero que desembolsas antes de vender: el coste total por unidad (compra, envío y otros gastos) multiplicado por la cantidad de unidades. La comisión no se incluye porque se descuenta al vender.</p>
+      </details>
+    </div>
+  </section>
+</main>
+
+<!-- PIE DE PÁGINA: los enlaces usan "#" como marcador hasta que existan esas páginas -->
+<footer class="pie">
+  <div class="wrap">
+    <div class="fila-pie">
+      <div class="logo">Profit<span>Calc</span></div>
+      <nav aria-label="Pie de página">
+        <a href="#">Contacto</a>
+        <a href="#">Privacidad</a>
+        <a href="#">Términos</a>
+        <a href="#">Acerca de nosotros</a>
+      </nav>
+    </div>
+    <p>Las cifras son estimaciones orientativas y no constituyen asesoría financiera ni fiscal.</p>
+  </div>
+</footer>
+
+<script>
+/* =========================================================
+   LÓGICA DE LA CALCULADORA
+   Flujo: 1) leer y validar campos → 2) calcular → 3) mostrar.
+   Todo ocurre en tu navegador: no se envía ningún dato a ningún servidor.
+   ========================================================= */
+(function () {
+  'use strict'; // modo estricto: ayuda a detectar errores de programación
+
+  // Símbolo de moneda que se muestra en los resultados. Cámbialo si lo necesitas (€, S/, MX$...).
+  var MONEDA = '$';
+
+  // Atajo para buscar elementos por su id
+  function $(id) { return document.getElementById(id); }
+
+  /* ---------- Descripción de cada campo y sus reglas ----------
+     requerido: no puede quedar vacío. Si no es requerido, vacío = 0.
+     min / max: límites permitidos.
+     entero: solo números enteros (para las unidades).
+     mayorQueCero: el valor debe ser > 0 (el precio de venta). */
+  var CAMPOS = [
+    { id: 'compra',   requerido: true,  min: 0 },
+    { id: 'envio',    requerido: false, min: 0 },
+    { id: 'otros',    requerido: false, min: 0 },
+    { id: 'venta',    requerido: true,  min: 0, mayorQueCero: true },
+    { id: 'comision', requerido: false, min: 0, max: 100 },
+    { id: 'unidades', requerido: true,  min: 1, entero: true, max: 1000000000 }
+  ];
+
+  var formulario = $('formulario');
+  var estado = $('estado');
+  var panel = $('resultados');
+
+  /* ---------- Formatos de número ----------
+     Intl.NumberFormat muestra siempre 2 decimales (y 1 para el margen). */
+  var formatoDinero = new Intl.NumberFormat('es', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  var formatoPorcentaje = new Intl.NumberFormat('es', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+
+  function dinero(n) {
+    // Un número negativo se muestra como -$5,00 (signo delante del símbolo)
+    return (n < 0 ? '-' : '') + MONEDA + formatoDinero.format(Math.abs(n));
+  }
+
+  /* ---------- Convertir texto en número ----------
+     Acepta coma o punto decimal ("12,50" o "12.50").
+     Devuelve null si está vacío y NaN si no es un número válido. */
+  function leerNumero(texto) {
+    var limpio = texto.trim().replace(',', '.');
+    if (limpio === '') return null;
+    // Solo dígitos, signo negativo opcional y un punto decimal
+    if (!/^-?\d*\.?\d+$/.test(limpio)) return NaN;
+    return Number(limpio);
+  }
+
+  /* ---------- Validar un campo ----------
+     Devuelve { valor } si es correcto o { mensaje } si hay error. */
+  function validar(campo) {
+    var n = leerNumero($(campo.id).value);
+
+    if (n === null) {
+      // Campo vacío: error si es obligatorio; si no, se toma como 0
+      return campo.requerido ? { mensaje: 'Este campo es obligatorio.' } : { valor: 0 };
+    }
+    if (isNaN(n) || !isFinite(n)) return { mensaje: 'Escribe un número válido (ej. 12.50).' };
+    if (n < 0) return { mensaje: 'No puede ser negativo.' };
+    if (campo.mayorQueCero && n <= 0) return { mensaje: 'Debe ser mayor que 0.' };
+    if (campo.entero && !Number.isInteger(n)) return { mensaje: 'Usa un número entero.' };
+    if (campo.min !== undefined && n < campo.min) return { mensaje: 'El mínimo es ' + campo.min + '.' };
+    if (campo.max !== undefined && n > campo.max) return { mensaje: 'El máximo es ' + campo.max + '.' };
+    return { valor: n };
+  }
+
+  /* ---------- Mostrar / borrar errores de cada campo ---------- */
+  function marcarError(id, mensaje) {
+    $(id).setAttribute('aria-invalid', 'true'); // activa el borde rojo (ver CSS)
+    $('error-' + id).textContent = mensaje;
+  }
+  function limpiarErrores() {
+    CAMPOS.forEach(function (c) {
+      $(c.id).removeAttribute('aria-invalid');
+      $('error-' + c.id).textContent = '';
+    });
+    estado.textContent = '';
+    estado.className = 'estado';
+  }
+
+  /* ---------- Dejar los resultados en blanco ---------- */
+  function vaciarResultados() {
+    panel.classList.remove('perdida');
+    ['r-neta', 'r-coste', 'r-comision', 'r-inversion', 'r-total'].forEach(function (id) {
+      $(id).textContent = '—';
+    });
+    $('r-margen').textContent = 'Margen de ganancia: —';
+    $('r-total-etiqueta').textContent = 'Ganancia total';
+  }
+
+  /* ---------- CÁLCULO PRINCIPAL ---------- */
+  function calcular(v) {
+    // Coste total por unidad = compra + envío + otros gastos
+    var costeUnidad = v.compra + v.envio + v.otros;
+
+    // La comisión es un porcentaje del precio de venta
+    var comisionUnidad = v.venta * (v.comision / 100);
+
+    // Ganancia neta por unidad = precio de venta − coste − comisión
+    var netaUnidad = v.venta - costeUnidad - comisionUnidad;
+
+    // Margen = ganancia neta ÷ precio de venta × 100 (venta > 0 está garantizado por la validación)
+    var margen = (netaUnidad / v.venta) * 100;
+
+    return {
+      costeUnidad: costeUnidad,
+      comisionUnidad: comisionUnidad,
+      netaUnidad: netaUnidad,
+      margen: margen,
+      gananciaTotal: netaUnidad * v.unidades,     // ganancia por unidad × unidades
+      inversion: costeUnidad * v.unidades          // dinero gastado antes de vender
+    };
+  }
+
+  /* ---------- Escribir los resultados en pantalla ---------- */
+  function mostrar(r, unidades) {
+    $('r-neta').textContent = dinero(r.netaUnidad);
+    $('r-margen').textContent = 'Margen de ganancia: ' + formatoPorcentaje.format(r.margen) + ' %';
+    $('r-coste').textContent = dinero(r.costeUnidad);
+    $('r-comision').textContent = dinero(r.comisionUnidad);
+    $('r-inversion').textContent = dinero(r.inversion);
+    $('r-total').textContent = dinero(r.gananciaTotal);
+    $('r-total-etiqueta').textContent = 'Ganancia total (' + unidades + (unidades === 1 ? ' unidad)' : ' unidades)');
+
+    // Si se pierde dinero, el panel pasa a rojo y se explica
+    var perdida = r.netaUnidad < 0;
+    panel.classList.toggle('perdida', perdida);
+
+    if (perdida) {
+      estado.textContent = 'Con estos datos pierdes dinero en cada unidad. Revisa el precio de venta o tus costes.';
+      estado.className = 'estado alerta';
+    } else if (r.netaUnidad === 0) {
+      estado.textContent = 'Estás en el punto de equilibrio: no ganas ni pierdes.';
+    }
+  }
+
+  /* ---------- Al pulsar "Calcular" (o Enter) ---------- */
+  formulario.addEventListener('submit', function (evento) {
+    evento.preventDefault(); // evita que el formulario recargue la página
+    limpiarErrores();
+
+    var valores = {};
+    var primerError = null;
+
+    // Se recorren todos los campos: se guardan valores y se recogen los errores
+    CAMPOS.forEach(function (campo) {
+      var res = validar(campo);
+      if (res.mensaje) {
+        marcarError(campo.id, res.mensaje);
+        if (!primerError) primerError = campo.id;
+      } else {
+        valores[campo.id] = res.valor;
+      }
+    });
+
+    // Si hay algún error, NO se calcula: así nunca se muestran resultados incorrectos
+    if (primerError) {
+      vaciarResultados();
+      estado.textContent = 'Revisa los campos marcados en rojo.';
+      estado.className = 'estado alerta';
+      $(primerError).focus(); // lleva el cursor al primer campo con problema
+      return;
+    }
+
+    mostrar(calcular(valores), valores.unidades);
+  });
+
+  /* ---------- Al pulsar "Limpiar" ---------- */
+  $('limpiar').addEventListener('click', function () {
+    formulario.reset();   // vacía todos los campos
+    limpiarErrores();
+    vaciarResultados();
+    $('compra').focus();
+  });
+})();
+</script>
+
+</body>
+</html>
